@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keyword-clustering"
+version = "0.1.0"
+description = "Interactive SEO keyword clustering, page mapping, and content-gap analysis tool"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+authors = [
+    {name = "John O'Connor", email = "john@weblifter.com.au"},
+]
+keywords = [
+    "seo", "keyword-clustering", "keyword-research",
+    "content-gap", "page-mapping", "nlp",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+dependencies = [
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
+    "nltk>=3.8",
+    "plotly>=5.18",
+    "streamlit>=1.32",
+    "numpy>=1.26",
+    "sentence-transformers>=2.6",
+    "hdbscan>=0.8",
+    "umap-learn>=0.5",
+    "kaleido>=0.2",
+]
+
+[project.scripts]
+keyword-cluster = "keyword_clustering.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["keyword_clustering*"]
