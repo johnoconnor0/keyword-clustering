@@ -5,6 +5,7 @@ import pytest
 
 from keyword_clustering.preprocessing import (
     classify_intent,
+    classify_intent_embedding,
     enrich_keywords,
     load_keywords,
     preprocess_text,
@@ -34,10 +35,10 @@ def test_preprocess_text_lowercase():
 
 
 def test_preprocess_text_stemming():
-    r1 = preprocess_text("marketing")
-    r2 = preprocess_text("marketer")
-    # Both should stem to the same root
-    assert r1 and r2  # both non-empty
+    r1 = preprocess_text("marketing", mode="stem")
+    r2 = preprocess_text("marketer", mode="stem")
+    # Porter stemmer maps both to the same root.
+    assert r1 == r2 == "market"
 
 
 def test_classify_intent_informational():
@@ -60,8 +61,35 @@ def test_classify_intent_navigational():
 
 
 def test_classify_intent_default():
-    result = classify_intent("keyword clustering")
-    assert result in {"informational", "commercial", "transactional", "navigational"}
+    # 'keyword clustering' has no transactional/commercial/navigational/local triggers,
+    # so it must fall through to the informational fallback (not just any label).
+    assert classify_intent("keyword clustering") == "informational"
+
+
+def test_classify_intent_local():
+    assert classify_intent("seo agency near me") == "local"
+
+
+def test_preprocess_modes():
+    src = "Running faster in Brisbane"
+    # mode="none": untouched.
+    assert preprocess_text(src, mode="none") == src
+    # mode="light": lowercase + collapse whitespace, stopwords NOT removed.
+    assert preprocess_text(src, mode="light") == "running faster in brisbane"
+    # mode="stem": stopwords ("in") removed; remaining words Porter-stemmed.
+    stemmed = preprocess_text(src, mode="stem")
+    assert "in" not in stemmed.split()
+    assert stemmed.split() == ["run", "faster", "brisban"]
+    # mode="lemmatize": stopwords removed; words lemmatised (no -ing collapse for default POS=n).
+    lemmatised = preprocess_text(src, mode="lemmatize")
+    assert "in" not in lemmatised.split()
+    assert "running" in lemmatised.split()  # WordNet leaves verb-form -ing alone with default POS
+
+
+def test_embedding_intent_classifier_returns_confidence():
+    label, conf = classify_intent_embedding("best seo agency comparison")
+    assert label in {"informational", "commercial", "transactional", "local", "navigational"}
+    assert 0.0 <= conf <= 1.0
 
 
 def test_load_keywords_missing_column(tmp_path):

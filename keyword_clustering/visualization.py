@@ -10,6 +10,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from .vectorization import to_dense
 
+# Colour-blind-safe qualitative palette (Wong 2011 / Plotly 'Safe' set).
+CLUSTER_COLOURS = px.colors.qualitative.Safe
+
 
 def _safe_size_col(df: pd.DataFrame) -> pd.Series | None:
     if "search_volume" in df.columns:
@@ -26,21 +29,39 @@ def plot_3d_clusters(df: pd.DataFrame, coords: np.ndarray) -> go.Figure:
     plot_df["y"] = coords[:, 1]
     plot_df["z"] = coords[:, 2] if coords.shape[1] > 2 else np.zeros(len(df))
 
-    hover = [c for c in ["keyword", "recommended_page", "primary_intent", "opportunity_score",
-                          "search_volume", "keyword_difficulty", "cluster_label"] if c in plot_df.columns]
+    hover = [
+        c
+        for c in [
+            "keyword",
+            "recommended_page",
+            "primary_intent",
+            "opportunity_score",
+            "search_volume",
+            "keyword_difficulty",
+            "cluster_label",
+        ]
+        if c in plot_df.columns
+    ]
     size_col = _safe_size_col(plot_df)
 
     fig = px.scatter_3d(
         plot_df,
-        x="x", y="y", z="z",
+        x="x",
+        y="y",
+        z="z",
         color="cluster_label" if "cluster_label" in plot_df.columns else None,
         size=size_col,
         size_max=20,
         hover_data=hover,
         title="3D Keyword Cluster Map",
         labels={"cluster_label": "Cluster"},
+        color_discrete_sequence=CLUSTER_COLOURS,
     )
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=40))
+    fig.update_layout(
+        margin=dict(l=0, r=0, b=0, t=40),
+        height=600,
+        legend=dict(orientation="h", y=-0.05),
+    )
     return fig
 
 
@@ -50,21 +71,33 @@ def plot_2d_clusters(df: pd.DataFrame, coords: np.ndarray) -> go.Figure:
     plot_df["x"] = coords[:, 0]
     plot_df["y"] = coords[:, 1]
 
-    hover = [c for c in ["keyword", "recommended_page", "primary_intent", "opportunity_score",
-                          "search_volume", "keyword_difficulty"] if c in plot_df.columns]
+    hover = [
+        c
+        for c in [
+            "keyword",
+            "recommended_page",
+            "primary_intent",
+            "opportunity_score",
+            "search_volume",
+            "keyword_difficulty",
+        ]
+        if c in plot_df.columns
+    ]
     size_col = _safe_size_col(plot_df)
 
     fig = px.scatter(
         plot_df,
-        x="x", y="y",
+        x="x",
+        y="y",
         color="cluster_label" if "cluster_label" in plot_df.columns else None,
         size=size_col,
         size_max=20,
         hover_data=hover,
         title="2D Keyword Topic Map",
         labels={"cluster_label": "Cluster"},
+        color_discrete_sequence=CLUSTER_COLOURS,
     )
-    fig.update_layout(xaxis_title="Component 1", yaxis_title="Component 2")
+    fig.update_layout(xaxis_title="Component 1", yaxis_title="Component 2", height=600)
     return fig
 
 
@@ -73,20 +106,25 @@ def plot_treemap(df: pd.DataFrame) -> go.Figure:
     if "cluster_label" not in df.columns:
         return go.Figure()
 
-    agg = df.groupby("cluster_label").agg(
-        keyword_count=("keyword", "count"),
-        total_volume=("search_volume", "sum") if "search_volume" in df.columns else ("keyword", "count"),
-    ).reset_index()
+    agg = (
+        df.groupby("cluster_label")
+        .agg(
+            keyword_count=("keyword", "count"),
+            total_volume=("search_volume", "sum") if "search_volume" in df.columns else ("keyword", "count"),
+        )
+        .reset_index()
+    )
 
     fig = px.treemap(
         agg,
         path=["cluster_label"],
         values="keyword_count",
         color="total_volume",
-        color_continuous_scale="Blues",
+        color_continuous_scale="Viridis",  # dark-mode-safe perceptually-uniform palette
         title="Cluster Treemap — Size: keyword count, Colour: total search volume",
         hover_data=["keyword_count", "total_volume"],
     )
+    fig.update_layout(height=600)
     return fig
 
 
@@ -99,7 +137,8 @@ def plot_similarity_heatmap(vectors: object, labels: list[str]) -> go.Figure:
         x=labels,
         y=labels,
         color_continuous_scale="RdBu_r",
-        zmin=0, zmax=1,
+        zmin=0,
+        zmax=1,
         title="Keyword Similarity Heatmap",
     )
     fig.update_layout(xaxis_tickangle=-45)
@@ -116,20 +155,19 @@ def plot_sankey(df: pd.DataFrame) -> go.Figure:
     all_nodes = pages + clusters
     node_idx = {n: i for i, n in enumerate(all_nodes)}
 
-    links: dict[tuple, int] = {}
-    for _, row in df.iterrows():
-        key = (row["recommended_page"], row["cluster_label"])
-        links[key] = links.get(key, 0) + 1
+    # Vectorised link counting — replaces O(n) iterrows with a single groupby.
+    counts = df.groupby(["recommended_page", "cluster_label"], dropna=False).size().reset_index(name="count")
+    source = [node_idx[p] for p in counts["recommended_page"].tolist()]
+    target = [node_idx[c] for c in counts["cluster_label"].tolist()]
+    value = counts["count"].tolist()
 
-    source = [node_idx[k[0]] for k in links]
-    target = [node_idx[k[1]] for k in links]
-    value = list(links.values())
-
-    fig = go.Figure(go.Sankey(
-        node=dict(label=all_nodes, pad=15, thickness=20),
-        link=dict(source=source, target=target, value=value),
-    ))
-    fig.update_layout(title="Page → Cluster Keyword Flow")
+    fig = go.Figure(
+        go.Sankey(
+            node=dict(label=all_nodes, pad=15, thickness=20),
+            link=dict(source=source, target=target, value=value),
+        )
+    )
+    fig.update_layout(title="Page → Cluster Keyword Flow", height=700)
     return fig
 
 
@@ -141,8 +179,11 @@ def plot_opportunity_matrix(df: pd.DataFrame) -> go.Figure:
 
     plot_df = df.dropna(subset=["opportunity_score", "keyword_difficulty"]).copy()
     size_col = _safe_size_col(plot_df)
-    hover = [c for c in ["keyword", "recommended_page", "primary_intent", "cluster_label",
-                          "search_volume", "rank"] if c in plot_df.columns]
+    hover = [
+        c
+        for c in ["keyword", "recommended_page", "primary_intent", "cluster_label", "search_volume", "rank"]
+        if c in plot_df.columns
+    ]
 
     fig = px.scatter(
         plot_df,
@@ -154,14 +195,16 @@ def plot_opportunity_matrix(df: pd.DataFrame) -> go.Figure:
         hover_data=hover,
         title="SERP Opportunity Matrix — x: Difficulty, y: Opportunity Score",
         labels={"keyword_difficulty": "Keyword Difficulty", "opportunity_score": "Opportunity Score"},
+        color_discrete_sequence=CLUSTER_COLOURS,
     )
+    fig.update_layout(height=600)
     return fig
 
 
 def plot_network_graph(df: pd.DataFrame, vectors: object, top_n_edges: int = 80) -> go.Figure:
     """Keyword network graph: nodes=keywords, edges=high cosine similarity pairs."""
-    from sklearn.metrics.pairwise import cosine_similarity as cos_sim
     from sklearn.decomposition import PCA
+    from sklearn.metrics.pairwise import cosine_similarity as cos_sim
 
     dense = to_dense(vectors)
     sim = cos_sim(dense)
@@ -180,23 +223,32 @@ def plot_network_graph(df: pd.DataFrame, vectors: object, top_n_edges: int = 80)
             edge_x += [coords[r, 0], coords[c, 0], None]
             edge_y += [coords[r, 1], coords[c, 1], None]
 
-    edge_trace = go.Scatter(x=edge_x, y=edge_y, mode="lines",
-                             line=dict(width=0.5, color="#aaa"), hoverinfo="none")
+    edge_trace = go.Scatter(x=edge_x, y=edge_y, mode="lines", line=dict(width=0.5, color="#aaa"), hoverinfo="none")
 
     hover_text = [f"{kw}<br>Cluster: {cl}" for kw, cl in zip(keywords, cluster_labels)]
     node_trace = go.Scatter(
-        x=coords[:, 0], y=coords[:, 1],
+        x=coords[:, 0],
+        y=coords[:, 1],
         mode="markers",
-        marker=dict(size=8, color=df["cluster_id"].tolist() if "cluster_id" in df.columns else None,
-                    colorscale="Viridis", showscale=False),
-        text=hover_text, hoverinfo="text",
+        marker=dict(
+            size=8,
+            color=df["cluster_id"].tolist() if "cluster_id" in df.columns else None,
+            colorscale="Viridis",
+            showscale=False,
+        ),
+        text=hover_text,
+        hoverinfo="text",
     )
 
-    fig = go.Figure([edge_trace, node_trace],
-                    layout=go.Layout(title="Keyword Similarity Network",
-                                     showlegend=False,
-                                     xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                                     yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
+    fig = go.Figure(
+        [edge_trace, node_trace],
+        layout=go.Layout(
+            title="Keyword Similarity Network",
+            showlegend=False,
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        ),
+    )
     return fig
 
 
@@ -213,6 +265,7 @@ def save_all_charts(
     Pass topic_vectors and topic_labels to also generate heatmap.html.
     """
     import os
+
     os.makedirs(output_dir, exist_ok=True)
 
     opts = dict(include_plotlyjs="cdn")

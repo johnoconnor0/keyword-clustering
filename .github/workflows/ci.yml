@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    name: Tests (full extras) — Python ${{ matrix.python-version }}
 
     strategy:
       fail-fast: false
@@ -22,11 +23,72 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install package + all extras
+        run: pip install .[app,semantic,advanced,dev]
+
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('omw-1.4')"
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Mypy
+        run: mypy keyword_clustering
+
+      - name: Run tests with coverage floor
+        run: pytest tests/ -v --tb=short --cov=keyword_clustering --cov-report=term-missing --cov-fail-under=75
+
+  test-slim:
+    runs-on: ubuntu-latest
+    name: Tests (slim install) — Python 3.12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package without extras + dev tools only
+        run: pip install . pytest
 
       - name: Download NLTK data
         run: python -c "import nltk; nltk.download('stopwords')"
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+      - name: Run TF-IDF-only test subset
+        run: pytest tests/test_clustering.py tests/test_preprocessing.py tests/test_scoring.py tests/test_index_safety.py tests/test_dead_extras.py tests/test_labeling.py -v --tb=short
+
+  cli-smoke:
+    runs-on: ubuntu-latest
+    name: CLI end-to-end smoke
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package + app extras
+        run: pip install .[app,semantic,advanced]
+
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('stopwords')"
+
+      - name: Run keyword-cluster against bundled sample data
+        run: |
+          keyword-cluster run \
+            --keywords examples/sample_keywords.csv \
+            --pages examples/sample_pages.csv \
+            --topics examples/sample_topics.csv \
+            --output .tmp/audit-smoke \
+            --method kmeans \
+            --clusters 4 \
+            --embedding-model tfidf
+
+      - name: Assert expected artefacts
+        run: |
+          test -f .tmp/audit-smoke/clustered_keywords.csv
+          test -f .tmp/audit-smoke/recommendations.md

@@ -1,67 +1,74 @@
 # Output Files
 
-All files are written to the directory specified by `--output` (default: `outputs/`).
+All files are written to the `--output` directory.
 
-## CSV reports
+## Primary reports
 
-### `clustered_keywords.csv`
+- `clustered_keywords.csv`: keyword-level master output.
+- `keyword_page_map.csv`: keyword-to-page mapping with similarity and confidence bands.
+- `content_gap_report.csv`: keywords below threshold (`fixed|percentile|adaptive` mode).
+- `cannibalization_report.csv`: `ranking_cannibalization`, `mapping_conflict`, `intent_split`, `page_mismatch`, `consolidation_candidate`.
+- `cluster_summary.csv`: per-cluster summary.
+- `recommendations.md`: human-readable cluster recommendations.
+- `cluster_quality_report.csv`: quality metrics per cluster.
 
-One row per keyword. Core output for strategy work.
+## `match_confidence` bands
 
-| Column | Description |
-|---|---|
-| `keyword` | The keyword string |
-| `cluster_id` | Integer cluster label |
-| `cluster_label` | Human-readable cluster name (auto-generated) |
-| `primary_intent` | informational / commercial / transactional / navigational |
-| `recommended_page` | Best-matching page name |
-| `recommended_url` | URL of the recommended page |
-| `current_page` | Page currently ranking (derived from `current_url` in input) |
-| `page_similarity_score` | Cosine similarity to recommended page (0–1) |
-| `topic_similarity_score` | Cosine similarity to best-matching topic |
-| `opportunity_score` | Composite score: volume × 0.4 − difficulty × 0.3 + rank_gap × 0.3 |
-| `search_volume` | Monthly search volume |
-| `keyword_difficulty` | 0–100 difficulty score |
-| `cpc` | Cost per click |
-| `rank` | Current ranking position |
-| `branded` | True if keyword contains a brand term |
-| `notes` | Auto-generated flags: page mismatch, content gap, high opportunity |
+`keyword_page_map.csv` and `clustered_keywords.csv` carry a `match_confidence`
+column derived from `page_similarity_score`. The four bands are:
 
-### `keyword_page_map.csv`
+| Band | Score range | Meaning |
+|---|---|---|
+| `poor_match` | `< 0.20` | The best-matching page is unrelated; treat as content gap candidate. |
+| `weak_match` | `0.20 ≤ score < 0.40` | Loose topical match. Consider new page or significant rewrite. |
+| `acceptable_match` | `0.40 ≤ score < 0.65` | Page covers the topic but isn't optimised for the keyword. |
+| `strong_match` | `score ≥ 0.65` | The page is the right target; focus on on-page optimisation. |
 
-Keyword → page assignments with similarity scores and intent.
+The `weak_match_rate` and `weakly_matched_percentage` metrics in the cluster
+quality report aggregate the proportion of keywords in a cluster sitting at the
+`weak_match` band.
 
-### `content_gap_report.csv`
+## Quality metrics included
 
-Keywords where `page_similarity_score == 0` — no existing page matches the keyword.
-These represent opportunities to create new content.
+- `silhouette_score`
+- `avg_intra_cluster_similarity`
+- `avg_nearest_cluster_similarity`
+- `intent_purity`
+- `page_purity`
+- `serp_overlap_mean` (when `serp_urls` input exists)
+- `weak_match_rate`
+- `weakly_matched_percentage`
+- `outlier_count`
+- `global_outlier_count`
+- `outlier_percentage`
 
-### `cannibalization_report.csv`
+## SEO workflow exports
 
-Clusters where two or more distinct pages are mapped as `recommended_page`.
-Each row lists the competing pages and a sample of the keywords involved.
+- `page_briefs/*.md`
+- `internal_linking_opportunities.csv`
+- `keyword_to_heading_map.csv`
+- `content_hub_map.html`
+- `serp_feature_opportunities.csv`
 
-### `cluster_summary.csv`
+## Visual outputs
 
-Per-cluster aggregated metrics: keyword count, total search volume, average difficulty,
-average opportunity score, and a sample of the top keywords.
+- `cluster_map_3d.html`
+- `cluster_map_2d.html`
+- `treemap.html`
+- `heatmap.html` (when topics are supplied)
+- `sankey.html`
+- `opportunity_matrix.html`
+- `network_graph.html`
+- `interactive_report.html`
 
-### `recommendations.md`
+## Run-history artifacts (`--run-history`)
 
-Plain-English strategy notes per cluster including recommended page, primary intent,
-total search volume, opportunity score, and suggested actions.
+Each run stores in `outputs/runs/<timestamp>_<id>/`:
 
-## Interactive HTML charts
-
-All charts use Plotly with CDN-loaded JS (~20 KB per file).
-
-| File | Description |
-|---|---|
-| `cluster_map_3d.html` | 3D scatter coloured by cluster, sized by search volume |
-| `cluster_map_2d.html` | 2D topic map (PCA/UMAP/t-SNE components 1 & 2) |
-| `treemap.html` | Cluster treemap — size: keyword count, colour: total volume |
-| `heatmap.html` | Cosine similarity heatmap across topics |
-| `sankey.html` | Page → cluster keyword flow |
-| `opportunity_matrix.html` | SERP scatter: x=difficulty, y=opportunity score, size=volume |
-| `network_graph.html` | Keyword similarity network (nodes=keywords, edges=high cosine similarity) |
-| `interactive_report.html` | All charts bundled into a single portable HTML file |
+- `clustered_keywords.csv`
+- `cluster_quality_report.csv`
+- `cluster_summary.csv`
+- `config.json`
+- `input_schema.json`
+- `metrics.json`
+- `charts/` (full chart bundle)

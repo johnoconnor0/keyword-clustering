@@ -1,20 +1,128 @@
-outputs/
+# ─── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
+
+# Build / install artefacts.
+*.egg
+*.egg-info/
+build/
+dist/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+MANIFEST
+.installed.cfg
+develop-eggs/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+var/
+*.manifest
+*.spec
+
+# Virtual environments.
 venv/
 .venv/
 env/
 .env
-*.egg-info/
-dist/
-build/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# ─── Test / type / lint caches ─────────────────────────────────────────────────
 .pytest_cache/
 .mypy_cache/
-*.log
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+.tox/
+.nox/
+.benchmarks/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.cache
+
+# ─── Project runtime artefacts ─────────────────────────────────────────────────
+# CLI / Streamlit produce these — never commit a run's outputs.
+outputs/
+.tmp/
+# Embedding cache (per-text vectors keyed by content hash).
+.cache/
+.cache/embeddings/
+# Generated example artefacts that get refreshed every run.
+examples/output_*.csv
+examples/interactive_report.html
+
+# ─── Streamlit ─────────────────────────────────────────────────────────────────
+.streamlit/secrets.toml
+.streamlit/credentials.toml
+
+# ─── Docs build ────────────────────────────────────────────────────────────────
+site/
+
+# ─── IDE / editor noise ────────────────────────────────────────────────────────
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.spyderproject
+.spyproject
+.rope_project_settings/
+.project
+.pydevproject
+.settings/
+# Note: .vscode/settings.json is intentionally tracked (shared editor config).
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.log
+
+# ─── OS noise ──────────────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-examples/screenshots/*.png
-examples/screenshots/*.gif
+Desktop.ini
+
+# ─── Logs / runtime files ──────────────────────────────────────────────────────
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# ─── Notebooks ─────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_meta
+
+# ─── Plan / scratch / private ──────────────────────────────────────────────────
+todo
+.anthril/
+.claude/
+TODO.local.md
+NOTES.local.md
+
+# ─── Secrets ──────────────────────────────────────────────────────────────────
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.yml
+secrets.yaml

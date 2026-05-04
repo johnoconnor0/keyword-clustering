@@ -1,0 +1,116 @@
+# Aggressive .dockerignore — keep the build context lean. Anything not strictly
+# needed at runtime stays out so `docker build` is fast and the image is small.
+
+# ─── Version control ───────────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ─── Python build / cache ──────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+build/
+dist/
+sdist/
+wheels/
+pip-wheel-metadata/
+
+# ─── Virtual environments ──────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env
+.env.*
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# ─── Test / type / lint caches ─────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+.tox/
+.nox/
+.benchmarks/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.cache
+
+# ─── Tests + dev tooling (not needed at runtime) ───────────────────────────────
+tests/
+.pre-commit-config.yaml
+mkdocs.yml
+
+# ─── Local-only working files ──────────────────────────────────────────────────
+.tmp/
+.cache/
+outputs/
+.anthril/
+.claude/
+todo
+TODO.local.md
+NOTES.local.md
+
+# ─── Generated example artefacts ───────────────────────────────────────────────
+examples/output_*.csv
+examples/interactive_report.html
+# Screenshots are documentation-only — kept out of the runtime image.
+examples/screenshots/
+
+# ─── Streamlit secrets / local config ──────────────────────────────────────────
+.streamlit/secrets.toml
+.streamlit/credentials.toml
+
+# ─── Docs (image is for the running app, not for serving docs) ─────────────────
+docs/
+site/
+CHANGELOG.md
+CONTRIBUTING.md
+
+# ─── IDE / editor noise ────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+.spyderproject
+.spyproject
+
+# ─── OS noise ──────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ─── Notebooks ─────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Misc ──────────────────────────────────────────────────────────────────────
+*.log
+*.pid
+*.pid.lock
+*.pem
+*.key
+secrets.yml
+secrets.yaml
+Dockerfile.bak
+docker-compose.override.yml
